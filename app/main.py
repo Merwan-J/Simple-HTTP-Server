@@ -1,16 +1,18 @@
-# Uncomment this to pass the first stage
 import socket
 
 
 def main():
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!")
+    with socket.create_server(("localhost", 4221)) as socket_server:
+        while True: # keep the server running
+            conn, addr = socket_server.accept()
+            with conn:
+                data = "HTTP/1.1 200 OK\r\n\r\n".encode()
+                conn.sendall(data)
+                print("Sent data to client with address: ", addr)
+                print("Data sent: ", data.decode())
 
-    # Uncomment this to pass the first stage
-    #
-    server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
-    server_socket.accept() # wait for client
 
+                
 
 if __name__ == "__main__":
     main()
