@@ -21,8 +21,8 @@ def main():
                 method, path = extract_request_line(data)
                 
                 path = destructure_path(path)
-                
-                if not path:
+
+                if not path[0]:
                     msg = "HTTP/1.1 200 OK\r\n\r\n"
                 elif path[0] == "echo":
                     echo_string = path[-1] 
