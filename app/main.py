@@ -1,6 +1,7 @@
 import socket
 import threading
 import sys
+import gzip
 
 def main():
     def read_header(request, key):
@@ -22,8 +23,6 @@ def main():
         return path.split("/")
     
     def handle_connection(conn: socket.socket , addr):
-        supported_compresions = ["gzip"]
-
         with conn:
             request = conn.recv(1024)
             data = request.decode()
@@ -35,8 +34,12 @@ def main():
             elif path[0] == "echo":
                 echo_string = path[-1]
                 client_compression = [compression.strip() for compression in read_header(data, "accept-encoding").split(",")]
-                common_compression = list(set(client_compression) & set(supported_compresions))
-                content_encoding = f"content-encoding: {common_compression[0]}\r\n" if common_compression else ""
+                content_encoding = ""
+
+                if "gzip" in client_compression:
+                    content_encoding = f"content-encoding: gzip\r\n"
+                    echo_string = gzip.compress(bytes(echo_string, "utf-8"))
+
                 msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n{content_encoding}\r\n{echo_string}" 
             elif path[0] == "user-agent":
                 user_agent = read_header(data, "user-agent")
