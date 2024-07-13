@@ -20,8 +20,12 @@ def main():
                 data = request.decode()
                 method, path = extract_request_line(data)
                 
-                echo_string = destructure_path(path)[-1] 
-                msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n\r\n{echo_string}" 
+                path = destructure_path(path)
+                if path[0] == "echo":
+                    echo_string = path[-1] 
+                    msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n\r\n{echo_string}" 
+                else:
+                    msg = "HTTP/1.1 404 Not Found\r\n\r\n"
                 conn.sendall(msg.encode())
 
 
