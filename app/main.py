@@ -40,11 +40,7 @@ def main():
                 if "gzip" in client_compression:
                     content_encoding = f"content-encoding: gzip\r\n"
                     echo_string = gzip.compress(echo_string.encode())
-                    echo_string = binascii.hexlify(echo_string)
-                    hex_str = echo_string.decode('utf-8')
-                    formatted_hex = ' '.join(hex_str[i:i+2] for i in range(0, len(hex_str), 2))
-                    print(formatted_hex)
-                    echo_string = formatted_hex
+                    print(echo_string)
 
                 msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n{content_encoding}\r\n{echo_string}" 
             elif path[0] == "user-agent":
