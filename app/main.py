@@ -1,4 +1,6 @@
 import socket
+import threading
+from time import sleep
 
 
 def main():
@@ -18,28 +20,32 @@ def main():
         path = path[1:]
         return path.split("/")
     
+    def handle_connection(conn: socket.socket , addr):
+        with conn:
+            request = conn.recv(1024)
+            sleep(5)
+            data = request.decode()
+            method, path = extract_request_line(data)
+            
+            path = destructure_path(path)
+            if not path[0]:
+                msg = "HTTP/1.1 200 OK\r\n\r\n"
+            elif path[0] == "echo":
+                echo_string = path[-1] 
+                msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n\r\n{echo_string}" 
+            elif path[0] == "user-agent":
+                user_agent = read_header(data, "user-agent")
+                msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}"
+            else:
+                msg = "HTTP/1.1 404 Not Found\r\n\r\n"
+            conn.sendall(msg.encode())
+
     with socket.create_server(("localhost", 4221)) as socket_server:
         print("Server started at port 4221")
         while True: 
             conn, addr = socket_server.accept()
-            with conn:
-                request = conn.recv(1024)
-                data = request.decode()
-                method, path = extract_request_line(data)
-                
-                path = destructure_path(path)
+            threading.Thread(target=handle_connection, args=(conn, addr)).start()
 
-                if not path[0]:
-                    msg = "HTTP/1.1 200 OK\r\n\r\n"
-                elif path[0] == "echo":
-                    echo_string = path[-1] 
-                    msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n\r\n{echo_string}" 
-                elif path[0] == "user-agent":
-                    user_agent = read_header(data, "user-agent")
-                    msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}"
-                else:
-                    msg = "HTTP/1.1 404 Not Found\r\n\r\n"
-                conn.sendall(msg.encode())
 
 
 if __name__ == "__main__":
