@@ -15,6 +15,9 @@ def main():
         method, path, _ = request_line.split(" ")
         return method, path
 
+    def get_request_body(request):
+        return request.split("\r\n")[-1]
+
     def destructure_path(path):
         path = path[1:]
         return path.split("/")
@@ -37,12 +40,17 @@ def main():
             elif path[0] == "files":
                 args = sys.argv
                 files_path = args[-1]
+                
+                if method == "POST":
+                    request_body = get_request_body(data)
+                    with open(files_path + "/" + path[-1], "w") as file:
+                        file.write(request_body)
                 try:
                     with open(files_path + "/" + path[-1], "r") as file:
                         file_content = file.read()
                         msg = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(file_content)}\r\n\r\n{file_content}"
                 except FileNotFoundError:
-                    msg = "HTTP/1.1 404 Not Found\r\n\r\n"
+                        msg = "HTTP/1.1 404 Not Found\r\n\r\n"
             else:
                 msg = "HTTP/1.1 404 Not Found\r\n\r\n"
             conn.sendall(msg.encode())
