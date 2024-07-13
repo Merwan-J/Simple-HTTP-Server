@@ -1,7 +1,7 @@
 import socket
 import threading
-from time import sleep
-
+import sys
+import os
 
 def main():
     def read_header(request, key):
@@ -35,6 +35,15 @@ def main():
             elif path[0] == "user-agent":
                 user_agent = read_header(data, "user-agent")
                 msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}"
+            elif path[0] == "files":
+                args = sys.argv 
+                files_path = args[1]
+                try:
+                    with open(files_path + "/" + path[-1], "r") as file:
+                        file_content = file.read()
+                        msg = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(file_content)}\r\n\r\n{file_content}"
+                except FileNotFoundError:
+                    msg = "HTTP/1.1 404 Not Found\r\n\r\n"
             else:
                 msg = "HTTP/1.1 404 Not Found\r\n\r\n"
             conn.sendall(msg.encode())
