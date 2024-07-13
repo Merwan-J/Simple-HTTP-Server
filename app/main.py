@@ -23,7 +23,6 @@ def main():
     def handle_connection(conn: socket.socket , addr):
         with conn:
             request = conn.recv(1024)
-            sleep(5)
             data = request.decode()
             method, path = extract_request_line(data)
             
