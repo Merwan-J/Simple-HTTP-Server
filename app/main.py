@@ -2,6 +2,13 @@ import socket
 
 
 def main():
+    def read_header(request, key):
+        headers = request.split("\r\n")[1:]
+        for header in headers:
+            if key == header[:len(key)].lower():
+                return header.split(": ")[1]
+        return None
+    
     def extract_request_line(request):
         request_line = request.split("\r\n")[0]
         method, path, _ = request_line.split(" ")
@@ -27,6 +34,9 @@ def main():
                 elif path[0] == "echo":
                     echo_string = path[-1] 
                     msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n\r\n{echo_string}" 
+                elif path[0] == "user-agent":
+                    user_agent = read_header(data, "user-agent")
+                    msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}"
                 else:
                     msg = "HTTP/1.1 404 Not Found\r\n\r\n"
                 conn.sendall(msg.encode())
