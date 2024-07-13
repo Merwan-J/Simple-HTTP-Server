@@ -34,7 +34,7 @@ def main():
                 msg = "HTTP/1.1 200 OK\r\n\r\n"
             elif path[0] == "echo":
                 echo_string = path[-1]
-                client_compression = read_header(data, "accept-encoding").split(",")    
+                client_compression = [compression.strip() for compression in read_header(data, "accept-encoding").split(",")]
                 common_compression = list(set(client_compression) & set(supported_compresions))
                 content_encoding = f"content-encoding: {common_compression[0]}\r\n" if common_compression else ""
                 msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n{content_encoding}\r\n{echo_string}" 
