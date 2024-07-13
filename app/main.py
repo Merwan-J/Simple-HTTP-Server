@@ -40,6 +40,7 @@ def main():
                 if "gzip" in client_compression:
                     content_encoding = f"content-encoding: gzip\r\n"
                     echo_string = gzip.compress(echo_string.encode())
+                    echo_string = binascii.hexlify(echo_string).decode('utf-8')
                     print(echo_string)
 
                 msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n{content_encoding}\r\n{echo_string}" 
