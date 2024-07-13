@@ -36,8 +36,12 @@ def main():
                 user_agent = read_header(data, "user-agent")
                 msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}"
             elif path[0] == "files":
-                args = sys.argv 
+                args = sys.argv
+                print(args)
+                print("args") 
                 files_path = args[1]
+                print(files_path)
+                print("files_path")
                 try:
                     with open(files_path + "/" + path[-1], "r") as file:
                         file_content = file.read()
