@@ -4,11 +4,7 @@ import sys
 
 def main():
     def read_header(request, key):
-        headers = request.split("\r\n")[1:]
-        for header in headers:
-            if key == header[:len(key)].lower():
-                return header.split(": ")[1]
-        return None
+        return request.lower().split(f"{key}: ")[1].split("\r\n")[0].split(",")    
     
     def extract_request_line(request):
         request_line = request.split("\r\n")[0]
@@ -23,6 +19,8 @@ def main():
         return path.split("/")
     
     def handle_connection(conn: socket.socket , addr):
+        supported_compresions = ["gzip"]
+
         with conn:
             request = conn.recv(1024)
             data = request.decode()
@@ -33,7 +31,10 @@ def main():
                 msg = "HTTP/1.1 200 OK\r\n\r\n"
             elif path[0] == "echo":
                 echo_string = path[-1] 
-                msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n\r\n{echo_string}" 
+                client_compression = read_header(data, "accept-encoding")
+                common_compression = list(set(client_compression) & set(supported_compresions))
+                content_encoding = f"content-encoding: {common_compression[0]}" if common_compression else ""
+                msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n{content_encoding}\r\n{echo_string}" 
             elif path[0] == "user-agent":
                 user_agent = read_header(data, "user-agent")
                 msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}"
