@@ -1,62 +1,66 @@
 import binascii
+import re
 import socket
 import threading
 import sys
 import gzip
+from typing import List
 
 class Headers:
-    def __init__(self, content_type="text/plain", content_length=None, content_encoding=None, accept_encoding=None):
+    def __init__(self, content_type=None, content_length=None, content_encoding=None, accept_encoding=None, user_agent=None):
         self.content_type = content_type
         self.content_length = content_length
         self.content_encoding = content_encoding
         self.accept_encoding = accept_encoding
-    
+        self.user_agent = user_agent
+
+    @classmethod
+    def from_request(cls, headers_list: List[str]):
+        headers = {key: value for key, value in (header.split(': ') for header in headers_list if header)}
+        content_type = headers.get("Content-Type", None)
+        content_length = headers.get("Content-Length", None)
+        content_encoding = headers.get("Content-Encoding", None)
+        accept_encoding = headers.get("Accept-Encoding", None)
+        user_agent = headers.get("User-Agent", None)
+
+        return cls(content_type, content_length, content_encoding, accept_encoding, user_agent)
+
     def encode(self):
-        pass
+        headers_list = [
+            *([f"Content-Type: {self.content_type}"] if self.content_type is not None else []),
+            *([f"Content-Length: {self.content_length}"] if self.content_length is not None else []),
+            *([f"Content-Encoding: {self.content_encoding}"] if self.content_encoding is not None else []),
+            *([f"Accept-Encoding: {self.accept_encoding}"] if self.accept_encoding is not None else []),
+            *([f"User-Agent: {self.user_agent}"] if self.user_agent is not None else [])
+        ]
+
+        headers_str = "\r\n".join(headers_list) + "\r\n\r\n"
+        return headers_str.encode('utf-8')
 
 class Request:
     def __init__(self, request):
         self.raw_request = request
-        self._headers = {}
-        self._body = ""
-        self._request_line = ""
-        self._method = ""
-        self._path = ""
+        self.header = None
+        self.body = ""
+        self.method = ""
+        self.path = ""
+        self.parse_request()
     
-    def parse_request_header(self):
-        pass
+    def parse_request(self):
+        pattern = r'^(POST|GET|PUT|DELETE|OPTIONS|HEAD) (\/\S*) HTTP\/1\.1\r\n((?:[^\r\n]+\r\n)*)(?:\r\n)?([\s\S]*)'
+        match = re.match(pattern, self.raw_request)
+        method, path, headers, body = match.groups()
 
-    def parse_request_body(self):
-        pass
-
-    def parse_request_line(self):
-        pass 
-
-    @property
-    def headers(self):
-        pass 
-
-    @property
-    def body(self):
-        pass 
-
-    @property
-    def request_line(self):
-        pass
-
-    @property
-    def method(self):
-        pass
-    
-    @property
-    def path(self):
-        pass
+        self.method = method
+        self.path = path
+        self.header = Headers.from_request(headers.split("\r\n"))
+        self.body = body
 
     def __str__(self):
         return self.raw_request
     
 class Response:
-    def __init__(self,http_version="HTTP/1.1" , status=200, headers=Headers(), body=""):
+    def __init__(self, status=200, headers=Headers(), body=""):
         self.status = status
         self.headers = headers
         self.body = body
@@ -67,76 +71,69 @@ class Response:
         }
 
     def encode(self):
-        pass
+        response_line = f"HTTP/1.1 {self.status} {self.messages.get(self.status, 'Unknown')}\r\n".encode()
+        headers = self.headers.encode()
+        body = self.body.encode() if type(self.body) == str else self.body
+        return response_line + headers + body
+        
+def read_file(file_path):
+    try:
+        with open(file_path, "r") as file:
+            return file.read()
+    except FileNotFoundError:
+        return None
 
-
-
-
+def write_to_file(file_path, data):
+    with open(file_path, "w") as file:
+        file.write(data)
 
 def main():
-    def read_header(request, key):
-        request = request.lower()
-        if key in request:
-            return request.split(f"{key}: ")[1].split("\r\n")[0]
-        return ""
-    
-    def extract_request_line(request):
-        request_line = request.split("\r\n")[0]
-        method, path, _ = request_line.split(" ")
-        return method, path
-
-    def get_request_body(request):
-        return request.split("\r\n")[-1]
-
-    def destructure_path(path):
-        path = path[1:]
-        return path.split("/")
-    
     def handle_connection(conn: socket.socket , addr):
         with conn:
-            request = conn.recv(1024)
-            data = request.decode()
-            method, path = extract_request_line(data)
+            raw_request = conn.recv(1024)
+            request = Request(raw_request.decode())
+            path, headers = request.path.split("/")[1:], request.header
+            response = Response()
             
-            path = destructure_path(path)
             if not path[0]:
-                msg = "HTTP/1.1 200 OK\r\n\r\n"
+                response.status = 200
             elif path[0] == "echo":
                 echo_string = path[-1]
-                client_compression = [compression.strip() for compression in read_header(data, "accept-encoding").split(",")]
-                content_encoding = ""
+                client_compression = request.header.accept_encoding or ""
 
                 if "gzip" in client_compression:
-                    content_encoding = f"content-encoding: gzip\r\n"
                     echo_string = gzip.compress(echo_string.encode())
-                    print(echo_string)
-                    conn.sendall(f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n{content_encoding}\r\n".encode() + echo_string)
-                    return
+                    response.headers.content_encoding = "gzip"  
+                
+                response.headers.content_type = "text/plain"
+                response.headers.content_length = len(echo_string)              
+                response.body = echo_string
 
-                msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(echo_string)}\r\n{content_encoding}\r\n{echo_string}" 
             elif path[0] == "user-agent":
-                user_agent = read_header(data, "user-agent")
-                msg = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(user_agent)}\r\n\r\n{user_agent}"
+                user_agent = headers.user_agent
+                response.headers.content_type = "text/plain"
+                response.headers.content_length = len(user_agent)
+                response.body = user_agent
+
             elif path[0] == "files":
                 args = sys.argv
                 files_path = args[-1]
-                if method == "GET":
-                    try:
-                        with open(files_path + "/" + path[-1], "r") as file:
-                            file_content = file.read()
-                            msg = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(file_content)}\r\n\r\n{file_content}"
-                    except FileNotFoundError:
-                        msg = "HTTP/1.1 404 Not Found\r\n\r\n"
-                elif method == "POST":
-                    request_body = get_request_body(data)
-                    with open(files_path + "/" + path[-1], "w") as file:
-                        file.write(request_body)
-                    msg = "HTTP/1.1 201 Created\r\n\r\n"
+                if request.method == "GET":
+                    file_content = read_file(files_path + "/" + path[-1])
+                    if file_content:
+                        response.headers.content_type = "application/octet-stream"
+                        response.headers.content_length = len(file_content)
+                        response.body = file_content
+                    else:
+                        response.status = 404
+                elif request.method == "POST":
+                    write_to_file(files_path + "/" + path[-1], request.body)
+                    response.status = 201
                 else:
-                    msg = "HTTP/1.1 404 Not Found\r\n\r\n"
+                    response.status = 404
             else:
-                msg = "HTTP/1.1 404 Not Found\r\n\r\n"
-            conn.sendall(msg.encode())
+                response.status = 404
+            conn.sendall(response.encode())
 
     with socket.create_server(("localhost", 4221)) as socket_server:
         print("Server started at port 4221")
