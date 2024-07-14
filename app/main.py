@@ -104,6 +104,8 @@ def main():
                 if "gzip" in [compression.strip() for compression in client_compression.split(",")]:
                     echo_string = gzip.compress(echo_string.encode())
                     response.headers.content_encoding = "gzip"  
+                    print("we 've got a gzip file here") 
+                    print(headers.accept_encoding)
                 
                 response.headers.content_type = "text/plain"
                 response.headers.content_length = len(echo_string)              
