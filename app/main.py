@@ -35,7 +35,6 @@ class Headers:
         ]
 
         headers_str = "\r\n".join(headers_list) + "\r\n\r\n"
-        print(headers_str.encode('utf-8'))
         return headers_str.encode('utf-8')
 
 class Request:
