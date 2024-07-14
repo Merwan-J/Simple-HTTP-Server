@@ -101,7 +101,7 @@ def main():
                 echo_string = path[-1]
                 client_compression = request.header.accept_encoding or ""
 
-                if "gzip" in client_compression:
+                if "gzip" in [compression.strip() for compression in client_compression.split(",")]:
                     echo_string = gzip.compress(echo_string.encode())
                     response.headers.content_encoding = "gzip"  
                 
