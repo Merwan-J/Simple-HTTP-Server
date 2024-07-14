@@ -4,6 +4,75 @@ import threading
 import sys
 import gzip
 
+class Headers:
+    def __init__(self, content_type="text/plain", content_length=None, content_encoding=None, accept_encoding=None):
+        self.content_type = content_type
+        self.content_length = content_length
+        self.content_encoding = content_encoding
+        self.accept_encoding = accept_encoding
+    
+    def encode(self):
+        pass
+
+class Request:
+    def __init__(self, request):
+        self.raw_request = request
+        self._headers = {}
+        self._body = ""
+        self._request_line = ""
+        self._method = ""
+        self._path = ""
+    
+    def parse_request_header(self):
+        pass
+
+    def parse_request_body(self):
+        pass
+
+    def parse_request_line(self):
+        pass 
+
+    @property
+    def headers(self):
+        pass 
+
+    @property
+    def body(self):
+        pass 
+
+    @property
+    def request_line(self):
+        pass
+
+    @property
+    def method(self):
+        pass
+    
+    @property
+    def path(self):
+        pass
+
+    def __str__(self):
+        return self.raw_request
+    
+class Response:
+    def __init__(self,http_version="HTTP/1.1" , status=200, headers=Headers(), body=""):
+        self.status = status
+        self.headers = headers
+        self.body = body
+        self.messages = {
+            200: "OK",
+            201: "Created",
+            404: "Not Found"
+        }
+
+    def encode(self):
+        pass
+
+
+
+
+
 def main():
     def read_header(request, key):
         request = request.lower()
